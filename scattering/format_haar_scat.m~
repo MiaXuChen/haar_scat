@@ -1,0 +1,46 @@
+function [out,meta] = format_haar_scat(S)
+% ----------------------------------------------------------------------------%
+% FORMAT_HAAR_SCAT Formats a scattering representation
+%
+% Usages
+%    [out,meta]  = FORMAT_HAAR_SCAT(S)
+%
+% Input
+%    S (cell): The scattering representation to be formatted.
+%
+% Output
+%    out: The same scattering representation, with signal and meta fields 
+%       from different orders concatenated. Since different orders have 
+%       meta fields of different sizes, the meta fields are filled with  
+%       -1's where necessary..
+%    meta (struct): Properties of the scattering nodes in out.
+%
+% See also
+%   RENORM_HAAR_SCAT
+% ----------------------------------------------------------------------------%
+
+M = length(S{1})-1;
+
+out.meta = struct();
+out.meta.j = [];
+
+for i = 0:M
+    temp = (-1) * ones(size(S{1}{i+1}.meta.j,1),M);
+    temp(1:size(S{1}{i+1}.meta.j,1),1:size(S{1}{i+1}.meta.j,2)) = S{1}{i+1}.meta.j;
+    out.meta.j = [out.meta.j; temp];
+end
+
+out.meta.j = repmat(out.meta.j,size(S{1}{M+1}.signal,2),1);
+
+out.signal = [];
+
+for n = 1:length(S)
+
+    temp_signal = [];
+    for i = 0:M
+        temp_signal = [temp_signal; S{n}{i+1}.signal];
+    end
+    reshape(temp_signal,)
+
+
+end

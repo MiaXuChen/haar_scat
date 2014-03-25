@@ -1,0 +1,133 @@
+% ----------------------------------------------------------------------------%
+% Classify MNIST by learnt Haar scattering
+%  - Learning complex Haar by pairing
+%  - scattering with h = (1,1)/sqrt(2), g = (1, -1)/sqrt(2)
+%  - With multiple trees trained
+%
+% Mia Xu Chen
+% Last update: Mar 19, 2013
+% ----------------------------------------------------------------------------%
+
+
+addpath(genpath('../pairing/'));
+% addpath(genpath('../organizequestionnaire/'));
+
+
+%% Generate data
+
+% load MNIST
+
+load('MNIST_X_tr_all.mat');
+load('MNIST_X_te_all.mat');
+
+
+
+NTreeSet = [(1:3:10)'; (15:5:50)']; %%%%
+ACC = zeros(size(NTreeSet));
+
+for iRound = 1:length(NTreeSet)
+    
+%% Form training and testing data
+
+NClass = 10;
+
+NTree = NTreeSet(iRound);
+
+NPCTe = 100;
+NPCTr_PT = 100;
+NPCTr = NPCTr_PT * NTree;
+
+NTr = NClass * NPCTr;
+NTe = NClass * NPCTe;
+
+TrainData = [];
+TestData = [];
+for iclass = 1:NClass
+    TrainData = [TrainData X_tr{iclass}(:,1: NPCTr)];
+    TestData = [TestData X_te{iclass}(:,1: NPCTe)];
+end
+TrainLabel = reshape(repmat((1:NClass),NPCTr,1),NTr,1);
+TestLabel = reshape(repmat((1:NClass),NPCTe,1),NTe,1);
+    
+    
+
+%% Learnt Haar Scattering
+
+options.M = 2;
+options.J = log2(256);
+options.mode = 'real';
+
+[Scat_Tr Scat_Te] = haar_scat_learnt_1d( TrainData, TestData, TrainLabel, NTree, options );
+
+
+%% Display wavelets
+% 
+% %%% choose the tree level
+% len_haar = 16; %4; %size of support of haar basis
+% 
+% %%% choose the tree
+% itree = 1;
+% 
+% SaveFig = 0;
+% 
+% display_haar(len_haar, BinT_feat{itree}, Data{itree}, SaveFig);
+
+%% Threshold, throw half
+
+num_feat = size( Scat_Tr, 1);
+
+m2 = mean(Scat_Tr.^2, 2); %compute mean squared norm for each feature
+
+[~, ind] = sort( m2, 'descend');
+
+Scat_Tr0 = Scat_Tr;
+Scat_Te0 = Scat_Te;
+
+Scat_Tr = Scat_Tr( ind(1:num_feat/2), :);
+Scat_Te = Scat_Te( ind(1:num_feat/2), :);
+
+%% Classification using Linear SVM
+
+% addpath(genpath('../libsvm-3.12/'));
+% 
+% [moys,TrainData] = preproc(Scat_Tr);
+% [moys,TestData] = preproc(Scat_Te);
+% 
+% [PredictLabel acc_svm opt_C] = SVMC_Linear(TrainData', TrainLabel, TestData', TestLabel);
+
+%% Classification using PCA
+
+Data_tr = cell(NClass,1);
+Data_te = cell(NClass,1);
+for s=1:NClass
+    [esp,Data_tr{s}] = preproc(Scat_Tr(:,TrainLabel == s)) ;   
+    [esp,Data_te{s}] = preproc(Scat_Te(:,TestLabel == s)) ;
+end
+
+ind = [10:5:100]'; % Posssible dimensions for the PCA classifier
+acc_pca = zeros(size(ind));
+for kit=1:length(ind)
+    k = ind(kit) ;
+    fprintf('%d - ',k) ;
+    [esp,P] = create_classif2(Data_tr,k) ;
+    res = apply_classif2(Data_te,esp,P) ;
+    
+    errs = 0 ;
+    for s=1:10
+        errs = errs + sum(res(s,:)~=s) ;
+    end
+    acc_pca(kit) = 1 - errs/size(res(:),1) ; 
+end
+fprintf('\n') ;
+
+ACC(iRound) = max(acc_pca);
+
+end
+
+save('acc_ntrees_random.mat','ACC','NTreeSet');
+
+
+
+
+
+
