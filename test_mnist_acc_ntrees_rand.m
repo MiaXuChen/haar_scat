@@ -55,7 +55,9 @@ TestLabel = reshape(repmat((1:NClass),NPCTe,1),NTe,1);
 
 options.M = 2;
 options.J = log2(256);
-options.mode = 'real';
+options.mode = 'real'; 
+
+
 
 [Scat_Tr Scat_Te] = haar_scat_learnt_1d( TrainData, TestData, TrainLabel, NTree, options );
 
